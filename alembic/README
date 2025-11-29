@@ -1,0 +1,4 @@
+Alembic migrations for the whole project.
+
+Use `python manage.py upgrade` to apply all migrations.
+
