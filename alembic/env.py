@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 from app.database.base import Base
 from app.database.session import engine as app_engine
 from app.core.auth import models as auth_models  # noqa: F401
+from app.core.areas import models as areas_models  # noqa: F401
 
 
 config = context.config

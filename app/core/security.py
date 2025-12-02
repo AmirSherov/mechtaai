@@ -9,10 +9,6 @@ import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
-
-
-# Используем pbkdf2_sha256 — чистый Python,
-# не требует C-библиотек, но даёт криптостойкий хеш.
 pwd_context = CryptContext(
     schemes=["pbkdf2_sha256"],
     deprecated="auto",
