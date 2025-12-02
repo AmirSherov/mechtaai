@@ -19,19 +19,14 @@ def _create_redis_client() -> Redis:
     Так работает и в docker-compose (host=redis), и при запуске uvicorn с хоста.
     """
     primary_url = settings.celery_broker_url
-
-    # Попытка 1: как указано в конфиге (обычно redis://redis:6379/0 в docker)
     try:
         client = Redis.from_url(primary_url, decode_responses=True)
         client.ping()
         return client
     except (RedisConnectionError, socket.gaierror):
         pass
-
-    # Попытка 2: локальный порт (для случая, когда веб крутится на хосте)
     fallback_url = "redis://localhost:6379/0"
     client = Redis.from_url(fallback_url, decode_responses=True)
-    # Если тут не получится — пусть ошибка долетит наружу, это уже реально нет Redis.
     client.ping()
     return client
 
