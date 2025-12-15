@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 from logging.config import fileConfig
+import os
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from app.database.base import Base
 from app.database.session import engine as app_engine
 from app.core.auth import models as auth_models  # noqa: F401
 from app.core.areas import models as areas_models  # noqa: F401
+from app.core.life_wheel import models as life_wheel_models  # noqa: F401
+from app.core.wants import models as wants_models  # noqa: F401
 
 
 config = context.config

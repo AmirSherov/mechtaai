@@ -8,6 +8,10 @@ from sqlalchemy import text
 from app.core.auth.api.v1.routes_auth import router as auth_router
 from app.core.auth.api.v1.routes_me import router as me_router
 from app.core.areas.api.v1.routes_areas import router as areas_router
+from app.core.life_wheel.api.v1.routes_life_wheel import (
+    router as life_wheel_router,
+)
+from app.core.wants.api.v1.routes_wants import router as wants_router
 from app.database.session import SessionLocal
 from app.utils.redis_client import get_redis
 from mechtaai_bg_worker.celery_app import celery_app
@@ -226,6 +230,8 @@ __STATUS_ROWS__
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(me_router, prefix="/api/v1")
 app.include_router(areas_router, prefix="/api/v1")
+app.include_router(life_wheel_router, prefix="/api/v1")
+app.include_router(wants_router, prefix="/api/v1")
 
 
 __all__ = ["app"]
