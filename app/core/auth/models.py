@@ -13,7 +13,7 @@ from sqlalchemy import (
     String,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -41,6 +41,7 @@ class User(Base):
         String, nullable=False, default="calendar"
     )
     personal_new_year_date = Column(Date, nullable=True)
+    daily_tip_cache = Column(JSONB, nullable=True)
 
     is_active = Column(Boolean, nullable=False, default=True)
     is_superuser = Column(Boolean, nullable=False, default=False)

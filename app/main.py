@@ -32,6 +32,9 @@ from app.core.life_wheel.api.v1.routes_life_wheel import (
     router as life_wheel_router,
 )
 from app.core.wants.api.v1.routes_wants import router as wants_router
+from app.core.esoterics.api.v1.routes_esoterics import (
+    router as esoterics_router,
+)
 from app.database.session import SessionLocal
 from app.utils.redis_client import get_redis
 from mechtaai_bg_worker.celery_app import celery_app
@@ -264,6 +267,7 @@ app.include_router(steps_router, prefix="/api/v1")
 app.include_router(rituals_router, prefix="/api/v1")
 app.include_router(visuals_router, prefix="/api/v1")
 app.include_router(gamification_router, prefix="/api/v1")
+app.include_router(esoterics_router, prefix="/api/v1")
 
 
 __all__ = ["app"]
