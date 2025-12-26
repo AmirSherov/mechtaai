@@ -61,3 +61,4 @@ python -m mechtaai_bg_worker.main
 - API: `GET http://localhost:8000/`
 - Swagger: `http://localhost:8000/docs`
 
+ 

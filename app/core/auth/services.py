@@ -94,6 +94,18 @@ def create_user(
     db.add(user)
     db.flush()
     db.refresh(user)
+
+    from app.core.gamification.models import GamificationProfile
+
+    profile = GamificationProfile(
+        user_id=user.id,
+        total_xp=0,
+        current_level=1,
+        current_streak=0,
+        longest_streak=0,
+        last_activity_date=None,
+    )
+    db.add(profile)
     return user
 
 

@@ -6,10 +6,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
+from celery.exceptions import TimeoutError as CeleryTimeoutError
 
 from app.core.auth.models import User
+from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.wants.schemas import (
+    WantsAnalysisPublic,
     WantsFutureMePublic,
     WantsFutureMeSetIn,
     WantsProgressPublic,
@@ -29,11 +32,13 @@ from app.core.wants.services import (
     get_completed_by_id,
     get_draft,
     get_history_page,
+    get_latest_analysis,
     get_or_create_draft,
     set_future_me,
     start_stream,
     update_reverse,
 )
+from mechtaai_bg_worker.celery_app import celery_app
 from app.response import Pagination, StandardResponse, make_success_response
 from app.response.response import APIError
 
@@ -407,6 +412,61 @@ def wants_complete_view(
     return make_success_response(result=WantsRawPublic.from_orm(wants_raw))
 
 
+@router.post(
+    "/analyze",
+    response_model=StandardResponse,
+    summary="Analyze wants via AI",
+    description=(
+        "Triggers AI analysis for the latest completed wants_raw and returns "
+        "the persisted wants_analysis payload."
+    ),
+)
+def wants_analyze_view(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> StandardResponse:
+    task = celery_app.send_task("wants.analyze", args=[str(user.id)])
+    timeout_seconds = settings.ai_proxy_timeout_seconds + 30
+    try:
+        result = task.get(timeout=timeout_seconds)
+    except CeleryTimeoutError:
+        raise APIError(
+            code="WANTS_AI_TIMEOUT",
+            http_code=504,
+            message="AI analysis timed out.",
+        )
+
+    if not result or not result.get("ok"):
+        error = (result or {}).get("error") or {}
+        raise APIError(
+            code=error.get("code", "WANTS_AI_FAILED"),
+            http_code=error.get("http_code", 500),
+            message=error.get("message", "AI analysis failed."),
+        )
+
+    analysis = (
+        WantsAnalysisPublic.model_validate(result["analysis"]).model_dump(mode="json")
+    )
+    return make_success_response(result=analysis)
+
+
+@router.get(
+    "/analysis",
+    response_model=StandardResponse,
+    summary="Get latest wants analysis",
+    description="Returns the latest wants_analysis record for the current user.",
+)
+def wants_analysis_view(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> StandardResponse:
+    analysis = get_latest_analysis(db, user.id)
+    if analysis is None:
+        return make_success_response(result=None)
+    payload = WantsAnalysisPublic.model_validate(analysis).model_dump(mode="json")
+    return make_success_response(result=payload)
+
+
 @router.get(
     "/history",
     response_model=StandardResponse,
@@ -489,4 +549,3 @@ def wants_raw_by_id_view(
 
 
 __all__ = ["router"]
-

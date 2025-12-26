@@ -34,6 +34,7 @@ broker_url = _choose_broker_url()
 celery_app = Celery(
     "mechtaai_bg_worker",
     broker=broker_url,
+    backend=broker_url,
 )
 
 celery_app.autodiscover_tasks(

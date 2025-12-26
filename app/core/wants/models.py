@@ -12,7 +12,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -128,10 +128,45 @@ Index(
 )
 
 
+class WantsAnalysis(Base):
+    __tablename__ = "wants_analysis"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    top_wants = Column(JSONB, nullable=False)
+    top_pains = Column(JSONB, nullable=False)
+    focus_areas = Column(JSONB, nullable=False)
+    patterns = Column(JSONB, nullable=False)
+    summary_comment = Column(Text, nullable=False)
+    suggested_questions = Column(JSONB, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+Index(
+    "ix_wants_analysis_user_created_at",
+    WantsAnalysis.user_id,
+    WantsAnalysis.created_at.desc(),
+)
+
+
 __all__ = [
     "WantsRaw",
     "WantsRawChunk",
     "WantsRawStatus",
     "WantsRawChunkExercise",
+    "WantsAnalysis",
 ]
-

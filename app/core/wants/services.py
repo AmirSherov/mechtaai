@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.core.wants.models import WantsRaw, WantsRawChunk
+from app.core.wants.models import WantsAnalysis, WantsRaw, WantsRawChunk
 from app.response.response import APIError
 
 
@@ -63,6 +63,18 @@ def get_completed_by_id(
             WantsRaw.id == raw_id,
             WantsRaw.status == "completed",
         )
+        .first()
+    )
+
+
+def get_latest_completed(db: Session, user_id: UUID) -> WantsRaw | None:
+    return (
+        db.query(WantsRaw)
+        .filter(
+            WantsRaw.user_id == user_id,
+            WantsRaw.status == "completed",
+        )
+        .order_by(desc(WantsRaw.completed_at), desc(WantsRaw.updated_at))
         .first()
     )
 
@@ -272,10 +284,40 @@ def get_history_page(
     return items, total
 
 
+def create_wants_analysis(
+    db: Session,
+    user_id: UUID,
+    payload: Dict[str, Any],
+) -> WantsAnalysis:
+    analysis = WantsAnalysis(
+        user_id=user_id,
+        top_wants=payload["top_wants"],
+        top_pains=payload["top_pains"],
+        focus_areas=payload["focus_areas"],
+        patterns=payload["patterns"],
+        summary_comment=payload["summary_comment"],
+        suggested_questions=payload.get("suggested_questions"),
+    )
+    db.add(analysis)
+    db.commit()
+    db.refresh(analysis)
+    return analysis
+
+
+def get_latest_analysis(db: Session, user_id: UUID) -> WantsAnalysis | None:
+    return (
+        db.query(WantsAnalysis)
+        .filter(WantsAnalysis.user_id == user_id)
+        .order_by(desc(WantsAnalysis.created_at))
+        .first()
+    )
+
+
 __all__ = [
     "get_draft",
     "get_or_create_draft",
     "get_completed_by_id",
+    "get_latest_completed",
     "start_stream",
     "append_stream_text",
     "finish_stream",
@@ -286,5 +328,6 @@ __all__ = [
     "get_progress",
     "complete_wants",
     "get_history_page",
+    "create_wants_analysis",
+    "get_latest_analysis",
 ]
-

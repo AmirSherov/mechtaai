@@ -4,6 +4,11 @@ import sys
 
 from mechtaai_bg_worker.celery_app import celery_app
 from mechtaai_bg_worker import email_worker  # noqa: F401  импорт для регистрации задач
+from mechtaai_bg_worker import wants_worker  # noqa: F401  импорт для регистрации задач
+from mechtaai_bg_worker import future_story_worker  # noqa: F401  импорт для регистрации задач
+from mechtaai_bg_worker import generate_goals_worker  # noqa: F401  импорт для регистрации задач
+from mechtaai_bg_worker import plan_steps_worker  # noqa: F401  импорт для регистрации задач
+from mechtaai_bg_worker import rituals_worker  # noqa: F401  импорт для регистрации задач
 
 
 def main() -> None:

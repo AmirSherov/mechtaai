@@ -3,11 +3,31 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from sqlalchemy import text
 
 from app.core.auth.api.v1.routes_auth import router as auth_router
 from app.core.auth.api.v1.routes_me import router as me_router
 from app.core.areas.api.v1.routes_areas import router as areas_router
+from app.core.future_story.api.v1.routes_future_story import (
+    router as future_story_router,
+)
+from app.core.generate_goals.api.v1.routes_goals import (
+    router as goals_router,
+)
+from app.core.plan_steps.api.v1.routes_steps import (
+    router as steps_router,
+)
+from app.core.rituals.api.v1.routes_rituals import (
+    router as rituals_router,
+)
+from app.core.visuals.api.v1.routes_visuals import (
+    router as visuals_router,
+)
+from app.core.gamification.api.v1.routes_gamification import (
+    router as gamification_router,
+)
 from app.core.life_wheel.api.v1.routes_life_wheel import (
     router as life_wheel_router,
 )
@@ -20,6 +40,12 @@ from app.response.response import APIError
 
 
 app = FastAPI()
+try:
+    uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+except RuntimeError:
+    pass
 
 
 @app.exception_handler(APIError)
@@ -232,6 +258,12 @@ app.include_router(me_router, prefix="/api/v1")
 app.include_router(areas_router, prefix="/api/v1")
 app.include_router(life_wheel_router, prefix="/api/v1")
 app.include_router(wants_router, prefix="/api/v1")
+app.include_router(future_story_router, prefix="/api/v1")
+app.include_router(goals_router, prefix="/api/v1")
+app.include_router(steps_router, prefix="/api/v1")
+app.include_router(rituals_router, prefix="/api/v1")
+app.include_router(visuals_router, prefix="/api/v1")
+app.include_router(gamification_router, prefix="/api/v1")
 
 
 __all__ = ["app"]

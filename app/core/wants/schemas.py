@@ -188,6 +188,49 @@ class WantsProgressPublic(BaseModel):
     )
 
 
+class WantsTopWant(BaseModel):
+    id: str
+    text: str
+    area_id: str
+    horizon: str
+    priority: int
+
+
+class WantsTopPain(BaseModel):
+    id: str
+    text: str
+    area_id: str
+    intensity: int
+
+
+class WantsFocusArea(BaseModel):
+    area_id: str
+    reason: str
+    weight: float
+
+
+class WantsPattern(BaseModel):
+    id: str
+    text: str
+
+
+class WantsAnalysisPayload(BaseModel):
+    top_wants: list[WantsTopWant]
+    top_pains: list[WantsTopPain]
+    focus_areas: list[WantsFocusArea]
+    patterns: list[WantsPattern]
+    summary_comment: str
+    suggested_questions: list[str] | None = None
+
+
+class WantsAnalysisPublic(WantsAnalysisPayload):
+    id: UUID
+    user_id: UUID
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 __all__ = [
     "WantsRawPublic",
     "WantsDraftRef",
@@ -199,4 +242,10 @@ __all__ = [
     "WantsReverseUpdateIn",
     "WantsReversePublic",
     "WantsProgressPublic",
+    "WantsTopWant",
+    "WantsTopPain",
+    "WantsFocusArea",
+    "WantsPattern",
+    "WantsAnalysisPayload",
+    "WantsAnalysisPublic",
 ]
