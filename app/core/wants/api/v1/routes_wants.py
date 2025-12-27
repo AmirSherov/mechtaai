@@ -11,6 +11,7 @@ from celery.exceptions import TimeoutError as CeleryTimeoutError
 from app.core.auth.models import User
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.limits.dependencies import check_text_quota
 from app.core.wants.schemas import (
     WantsAnalysisPublic,
     WantsFutureMePublic,
@@ -415,6 +416,7 @@ def wants_complete_view(
 @router.post(
     "/analyze",
     response_model=StandardResponse,
+    dependencies=[Depends(check_text_quota)],
     summary="Analyze wants via AI",
     description=(
         "Triggers AI analysis for the latest completed wants_raw and returns "

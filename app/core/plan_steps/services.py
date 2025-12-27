@@ -88,8 +88,29 @@ def update_step(
     return step
 
 
+def delete_step(
+    db: Session,
+    user_id: UUID,
+    step_id: UUID,
+) -> None:
+    step = (
+        db.query(Step)
+        .filter(Step.user_id == user_id, Step.id == step_id)
+        .first()
+    )
+    if step is None:
+        raise APIError(
+            code="STEP_NOT_FOUND",
+            http_code=404,
+            message="Шаг не найден.",
+        )
+    db.delete(step)
+    db.commit()
+
+
 __all__ = [
     "create_steps_batch",
     "get_steps",
     "update_step",
+    "delete_step",
 ]

@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    BigInteger,
     String,
     func,
 )
@@ -29,6 +30,7 @@ class User(Base):
     )
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
+    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)
 
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
@@ -42,6 +44,8 @@ class User(Base):
     )
     personal_new_year_date = Column(Date, nullable=True)
     daily_tip_cache = Column(JSONB, nullable=True)
+    plan_tier = Column(String, nullable=False, default="free")
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     is_active = Column(Boolean, nullable=False, default=True)
     is_superuser = Column(Boolean, nullable=False, default=False)

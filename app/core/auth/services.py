@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import random
+import secrets
+import string
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
@@ -18,6 +20,7 @@ from app.core.auth.schemas import (
     LoginRequest,
     RequestPasswordReset,
     ResetPasswordConfirm,
+    TelegramAuthRequest,
     TokenPair,
     UserCreate,
 )
@@ -63,6 +66,28 @@ def validate_password_strength(password: str) -> None:
                 "цифры и хотя бы один специальный символ"
             ),
         )
+
+
+def _generate_strong_password(length: int = 20) -> str:
+    if length < 12:
+        length = 12
+    lower = string.ascii_lowercase
+    upper = string.ascii_uppercase
+    digits = string.digits
+    special = "!@#$%^&*()-_=+"
+    all_chars = lower + upper + digits + special
+
+    password_chars = [
+        secrets.choice(lower),
+        secrets.choice(upper),
+        secrets.choice(digits),
+        secrets.choice(special),
+    ]
+    password_chars.extend(
+        secrets.choice(all_chars) for _ in range(length - len(password_chars))
+    )
+    secrets.SystemRandom().shuffle(password_chars)
+    return "".join(password_chars)
 
 
 def create_user(
@@ -135,6 +160,55 @@ def authenticate_user(
             message="Пользователь деактивирован или email не подтвержден",
         )
 
+    return user
+
+
+def authenticate_telegram_user(
+    db: Session,
+    data: TelegramAuthRequest,
+) -> User:
+    user = (
+        db.query(User)
+        .filter(User.telegram_id == data.telegram_id)
+        .first()
+    )
+    if user is not None:
+        if not user.is_active:
+            raise APIError(
+                code="AUTH_USER_INACTIVE",
+                http_code=403,
+                message="User is inactive",
+            )
+        updated = False
+        if data.first_name and data.first_name != user.first_name:
+            user.first_name = data.first_name
+            updated = True
+        if data.last_name and data.last_name != user.last_name:
+            user.last_name = data.last_name
+            updated = True
+        if updated:
+            db.add(user)
+        return user
+
+    if data.first_name is None:
+        raise APIError(
+            code="AUTH_TELEGRAM_USER_NOT_FOUND",
+            http_code=404,
+            message="User not found. Registration required.",
+        )
+
+    email = f"{data.telegram_id}@bot.mechta.ai"
+    password = _generate_strong_password()
+    payload = UserCreate(
+        email=email,
+        password=password,
+        first_name=data.first_name,
+        last_name=data.last_name,
+    )
+    user = create_user(db, payload)
+    user.is_active = True
+    user.telegram_id = data.telegram_id
+    db.add(user)
     return user
 
 
@@ -457,6 +531,7 @@ def reset_password(
 __all__ = [
     "create_user",
     "authenticate_user",
+    "authenticate_telegram_user",
     "create_session_and_tokens",
     "refresh_tokens",
     "create_email_verification_token",

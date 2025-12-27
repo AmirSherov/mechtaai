@@ -15,6 +15,7 @@ from app.core.auth.schemas import (
     ResetPasswordConfirm,
     SendEmailVerificationRequest,
     SessionPublic,
+    TelegramAuthRequest,
     TokenPair,
     UserCreate,
     UserPublic,
@@ -23,6 +24,7 @@ from app.core.auth.services import (
     MAX_VERIFICATION_ATTEMPTS,
     _utc_now,
     authenticate_user,
+    authenticate_telegram_user,
     create_email_verification_token,
     create_session_and_tokens,
     create_user,
@@ -34,6 +36,7 @@ from app.core.auth.services import (
     send_email_verification,
 )
 from app.core.dependencies import get_current_user, get_db
+from app.core.config import settings
 from app.core.security import decode_token
 from app.response import StandardResponse, make_success_response
 from app.response.response import APIError
@@ -108,6 +111,41 @@ def login(
     result: Dict[str, Any] = {
         "user": UserPublic.from_orm(user),
         "tokens": tokens,
+    }
+    return make_success_response(result=result)
+
+
+@router.post(
+    "/telegram",
+    response_model=StandardResponse,
+    summary="Telegram auth",
+    description="Authenticate or register a user by Telegram data.",
+)
+def telegram_auth(
+    payload: TelegramAuthRequest,
+    db: Session = Depends(get_db),
+    user_agent: str | None = Header(default=None, alias="User-Agent"),
+    bot_secret: str | None = Header(default=None, alias="X-Bot-Secret"),
+) -> StandardResponse:
+    if not bot_secret or bot_secret != settings.bot_secret_key:
+        raise APIError(
+            code="AUTH_TELEGRAM_FORBIDDEN",
+            http_code=403,
+            message="Access denied for non-bot request",
+        )
+
+    user = authenticate_telegram_user(db, payload)
+    tokens = create_session_and_tokens(
+        db,
+        user,
+        user_agent=user_agent,
+    )
+    db.commit()
+
+    result: Dict[str, Any] = {
+        "access_token": tokens.access_token,
+        "token_type": tokens.token_type,
+        "user": UserPublic.from_orm(user),
     }
     return make_success_response(result=result)
 

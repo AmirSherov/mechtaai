@@ -61,6 +61,14 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class TelegramAuthRequest(BaseModel):
+    telegram_id: int
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    photo_url: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 
@@ -107,6 +115,7 @@ __all__ = [
     "UserUpdate",
     "TokenPair",
     "LoginRequest",
+    "TelegramAuthRequest",
     "RefreshRequest",
     "ChangePasswordRequest",
     "RequestPasswordReset",

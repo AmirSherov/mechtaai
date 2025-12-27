@@ -36,6 +36,22 @@ def create_journal_entry(
     mood_score: int | None,
     energy_score: int | None,
 ) -> JournalEntry:
+    exists = (
+        db.query(JournalEntry)
+        .filter(
+            JournalEntry.user_id == user_id,
+            JournalEntry.date == today,
+            JournalEntry.type == entry_type,
+        )
+        .first()
+    )
+    if exists is not None:
+        raise APIError(
+            code="RITUALS_ALREADY_COMPLETED",
+            http_code=409,
+            message="Ритуал уже выполнен сегодня.",
+        )
+
     entry = JournalEntry(
         user_id=user_id,
         date=today,

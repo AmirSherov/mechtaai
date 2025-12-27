@@ -11,6 +11,7 @@ from app.core.areas.models import Area
 from app.core.auth.models import User
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.limits.dependencies import check_text_quota
 from app.core.future_story.schemas import (
     FutureStoryDraftIn,
     FutureStoryDraftPublic,
@@ -82,6 +83,7 @@ def future_story_draft_view(
 @router.post(
     "/generate",
     response_model=StandardResponse,
+    dependencies=[Depends(check_text_quota)],
     summary="Сгенерировать историю",
 )
 def future_story_generate_view(

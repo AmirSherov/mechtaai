@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field("HS256", env="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(30, env="REFRESH_TOKEN_EXPIRE_DAYS")
+    bot_secret_key: str = Field("", env="BOT_SECRET_KEY")
 
     password_reset_token_expire_minutes: int = Field(
         60, env="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES"
@@ -17,14 +18,10 @@ class Settings(BaseSettings):
     email_verification_token_expire_hours: int = Field(
         24, env="EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS"
     )
-
-    # Celery / background jobs
     celery_broker_url: str = Field(
         "redis://localhost:6379/0",
         env="CELERY_BROKER_URL",
     )
-
-    # AI proxy settings
     ai_proxy_url: str = Field(
         "http://localhost:8787/v1/chat",
         env="AI_PROXY_URL",
@@ -61,8 +58,6 @@ class Settings(BaseSettings):
         "http://localhost:8787/v1/images",
         env="AI_PROXY_IMAGE_URL",
     )
-
-    # SMTP / email settings (for Gmail or other SMTP providers)
     smtp_host: str = Field("smtp.gmail.com", env="SMTP_HOST")
     smtp_port: int = Field(587, env="SMTP_PORT")
     smtp_username: str = Field("", env="SMTP_USERNAME")

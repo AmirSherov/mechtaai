@@ -35,6 +35,7 @@ from app.core.gamification.services import (
     award_action,
     build_gamification_event,
 )
+from app.core.limits.dependencies import check_text_quota
 from app.response import StandardResponse, make_success_response
 from app.response.response import APIError
 from mechtaai_bg_worker.celery_app import celery_app
@@ -95,6 +96,7 @@ def rituals_entry_view(
 @router.post(
     "/weekly/analyze",
     response_model=StandardResponse,
+    dependencies=[Depends(check_text_quota)],
     summary="Анализ недели (AI)",
 )
 def weekly_analyze_view(

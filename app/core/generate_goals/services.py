@@ -105,6 +105,26 @@ def update_goal(
     return goal
 
 
+def delete_goal(
+    db: Session,
+    user_id: UUID,
+    goal_id: UUID,
+) -> None:
+    goal = (
+        db.query(Goal)
+        .filter(Goal.user_id == user_id, Goal.id == goal_id)
+        .first()
+    )
+    if goal is None:
+        raise APIError(
+            code="GOAL_NOT_FOUND",
+            http_code=404,
+            message="Цель не найдена.",
+        )
+    db.delete(goal)
+    db.commit()
+
+
 def get_latest_generation(
     db: Session,
     user_id: UUID,
@@ -122,5 +142,6 @@ __all__ = [
     "create_goals_batch",
     "get_goals",
     "update_goal",
+    "delete_goal",
     "get_latest_generation",
 ]

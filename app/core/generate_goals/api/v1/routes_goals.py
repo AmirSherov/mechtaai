@@ -17,13 +17,19 @@ from app.core.generate_goals.schemas import (
     GoalsGenerateIn,
 )
 from app.core.generate_goals.models import Goal
-from app.core.generate_goals.services import create_goals_batch, get_goals, update_goal
+from app.core.generate_goals.services import (
+    create_goals_batch,
+    delete_goal,
+    get_goals,
+    update_goal,
+)
 from app.core.gamification.services import (
     ActionType,
     award_action,
     build_gamification_event,
     merge_award_results,
 )
+from app.core.limits.dependencies import check_text_quota
 from app.response import StandardResponse, make_success_response
 from app.response.response import APIError
 from mechtaai_bg_worker.celery_app import celery_app
@@ -35,6 +41,7 @@ router = APIRouter(prefix="/goals", tags=["goals"])
 @router.post(
     "/generate",
     response_model=StandardResponse,
+    dependencies=[Depends(check_text_quota)],
     summary="Сгенерировать цели (AI)",
 )
 def goals_generate_view(
@@ -141,6 +148,20 @@ def goals_update_view(
     result = GoalPublic.model_validate(goal).model_dump(mode="json")
     result["gamification_event"] = gamification_event
     return make_success_response(result=result)
+
+
+@router.delete(
+    "/{goal_id}",
+    response_model=StandardResponse,
+    summary="Delete goal",
+)
+def goals_delete_view(
+    goal_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> StandardResponse:
+    delete_goal(db=db, user_id=user.id, goal_id=goal_id)
+    return make_success_response(result={"success": True})
 
 
 __all__ = ["router"]

@@ -13,6 +13,7 @@ from app.core.auth.models import User
 from app.core.auth.schemas import ChangePasswordRequest, UserPublic, UserUpdate
 from app.core.auth.services import logout_all_sessions, validate_password_strength
 from app.core.dependencies import get_current_user, get_db
+from app.core.limits.services import get_usage_snapshot
 from app.core.security import hash_password, verify_password
 from app.response import StandardResponse, make_success_response
 from app.response.response import APIError
@@ -33,6 +34,7 @@ router = APIRouter(
     summary="Получить текущего пользователя",
 )
 def get_me(
+    db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> StandardResponse:
     """
@@ -54,8 +56,14 @@ def get_me(
         logger.warning("me cache error: %r", exc)
         redis = None
 
+    usage = get_usage_snapshot(db, user)
     result_data: Dict[str, Any] = {
         "user": UserPublic.from_orm(user).model_dump(),
+        "plan": usage.plan,
+        "usage": {
+            "text": {"used": usage.text_used, "limit": usage.text_limit},
+            "image": {"used": usage.image_used, "limit": usage.image_limit},
+        },
     }
 
     if redis is not None:
@@ -91,8 +99,14 @@ def update_me(
     db.commit()
     db.refresh(user)
 
+    usage = get_usage_snapshot(db, user)
     result_data: Dict[str, Any] = {
         "user": UserPublic.from_orm(user).model_dump(),
+        "plan": usage.plan,
+        "usage": {
+            "text": {"used": usage.text_used, "limit": usage.text_limit},
+            "image": {"used": usage.image_used, "limit": usage.image_limit},
+        },
     }
 
     cache_key = f"me:user:{user.id}"

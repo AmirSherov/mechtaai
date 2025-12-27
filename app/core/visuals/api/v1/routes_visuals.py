@@ -18,6 +18,7 @@ from app.core.gamification.services import (
     award_action,
     build_gamification_event,
 )
+from app.core.limits.dependencies import check_image_quota
 from app.response import StandardResponse, make_success_response
 
 
@@ -27,6 +28,7 @@ router = APIRouter(prefix="/visuals", tags=["visuals"])
 @router.post(
     "/generate-story-image",
     response_model=StandardResponse,
+    dependencies=[Depends(check_image_quota)],
     summary="Сгенерировать изображение истории",
 )
 def generate_story_image_view(
@@ -67,6 +69,7 @@ def story_gallery_view(
 @router.post(
     "/regenerate",
     response_model=StandardResponse,
+    dependencies=[Depends(check_image_quota)],
     summary="Перегенерация изображения",
 )
 def regenerate_view(

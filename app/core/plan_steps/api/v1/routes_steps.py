@@ -17,12 +17,18 @@ from app.core.plan_steps.schemas import (
     StepsGenerateIn,
 )
 from app.core.plan_steps.models import Step
-from app.core.plan_steps.services import create_steps_batch, get_steps, update_step
+from app.core.plan_steps.services import (
+    create_steps_batch,
+    delete_step,
+    get_steps,
+    update_step,
+)
 from app.core.gamification.services import (
     ActionType,
     award_action,
     build_gamification_event,
 )
+from app.core.limits.dependencies import check_text_quota
 from app.response import StandardResponse, make_success_response
 from app.response.response import APIError
 from mechtaai_bg_worker.celery_app import celery_app
@@ -34,6 +40,7 @@ router = APIRouter(prefix="/steps", tags=["steps"])
 @router.post(
     "/generate",
     response_model=StandardResponse,
+    dependencies=[Depends(check_text_quota)],
     summary="Сгенерировать план шагов",
 )
 def steps_generate_view(
@@ -134,6 +141,20 @@ def steps_update_view(
     result = StepPublic.model_validate(step).model_dump(mode="json")
     result["gamification_event"] = gamification_event
     return make_success_response(result=result)
+
+
+@router.delete(
+    "/{step_id}",
+    response_model=StandardResponse,
+    summary="Delete step",
+)
+def steps_delete_view(
+    step_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> StandardResponse:
+    delete_step(db=db, user_id=user.id, step_id=step_id)
+    return make_success_response(result={"success": True})
 
 
 __all__ = ["router"]
