@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from app.core.auth.models import User
 from app.core.gamification.models import Achievement, GamificationProfile, UserAchievement
 from app.response.response import APIError
 
@@ -280,18 +281,20 @@ def get_leaderboard(
     limit: int = 20,
 ) -> List[Dict[str, object]]:
     rows = (
-        db.query(GamificationProfile)
+        db.query(GamificationProfile, User)
+        .join(User, User.id == GamificationProfile.user_id)
         .order_by(desc(GamificationProfile.total_xp))
         .limit(limit)
         .all()
     )
     return [
         {
-            "user_id": row.user_id,
-            "total_xp": row.total_xp,
-            "level": row.current_level,
+            "user_id": profile.user_id,
+            "first_name": user.first_name or user.last_name,
+            "total_xp": profile.total_xp,
+            "level": profile.current_level,
         }
-        for row in rows
+        for profile, user in rows
     ]
 
 

@@ -1,16 +1,15 @@
-version: "3.9"
-
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
   web:
     build: .
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - redis
     command: >
@@ -23,6 +22,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - redis
     command: >

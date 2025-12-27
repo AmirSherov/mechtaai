@@ -25,6 +25,7 @@ class AchievementPublic(BaseModel):
 
 class LeaderboardEntry(BaseModel):
     user_id: UUID
+    first_name: str | None = None
     total_xp: int
     level: int
 
