@@ -59,6 +59,7 @@ def get_me(
     usage = get_usage_snapshot(db, user)
     result_data: Dict[str, Any] = {
         "user": UserPublic.from_orm(user).model_dump(),
+        "subscription_expires_at": user.subscription_expires_at,
         "plan": usage.plan,
         "usage": {
             "text": {"used": usage.text_used, "limit": usage.text_limit},
@@ -102,6 +103,7 @@ def update_me(
     usage = get_usage_snapshot(db, user)
     result_data: Dict[str, Any] = {
         "user": UserPublic.from_orm(user).model_dump(),
+        "subscription_expires_at": user.subscription_expires_at,
         "plan": usage.plan,
         "usage": {
             "text": {"used": usage.text_used, "limit": usage.text_limit},

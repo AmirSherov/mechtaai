@@ -290,7 +290,8 @@ def get_leaderboard(
     return [
         {
             "user_id": profile.user_id,
-            "first_name": user.first_name or user.last_name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "total_xp": profile.total_xp,
             "level": profile.current_level,
         }

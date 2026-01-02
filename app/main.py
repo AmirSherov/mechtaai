@@ -35,6 +35,9 @@ from app.core.wants.api.v1.routes_wants import router as wants_router
 from app.core.esoterics.api.v1.routes_esoterics import (
     router as esoterics_router,
 )
+from app.core.billing.api.v1.routes_billing import (
+    router as billing_router,
+)
 from app.database.session import SessionLocal
 from app.utils.redis_client import get_redis
 from mechtaai_bg_worker.celery_app import celery_app
@@ -75,10 +78,7 @@ app.version = "1.0.0"
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root() -> str:
-    # Health checks
     api_ok = True
-
-    # DB
     db_ok = False
     try:
         db = SessionLocal()
@@ -91,8 +91,6 @@ async def root() -> str:
             db.close()
         except Exception:
             pass
-
-    # Redis
     redis_ok = False
     try:
         redis = get_redis()
@@ -101,7 +99,6 @@ async def root() -> str:
     except Exception:
         redis_ok = False
 
-    # Celery worker
     worker_ok = False
     try:
         replies = celery_app.control.ping(timeout=0.5)
@@ -268,6 +265,7 @@ app.include_router(rituals_router, prefix="/api/v1")
 app.include_router(visuals_router, prefix="/api/v1")
 app.include_router(gamification_router, prefix="/api/v1")
 app.include_router(esoterics_router, prefix="/api/v1")
+app.include_router(billing_router, prefix="/api/v1")
 
 
 __all__ = ["app"]
