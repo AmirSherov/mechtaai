@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth.models import (
     EmailVerificationToken,
+    LoginAttempt,
     PasswordResetToken,
     User,
     UserSession,
@@ -528,6 +529,294 @@ def reset_password(
     logout_all_sessions(db, user_id=user.id)
 
 
+QR_LOGIN_TOKEN_TTL_SECONDS = 180
+QR_LOGIN_MAX_ATTEMPTS_PER_IP = 5
+QR_LOGIN_RATE_LIMIT_WINDOW_MINUTES = 5
+
+
+def _generate_login_token() -> str:
+    return f"login_{secrets.token_urlsafe(32)}"
+
+
+def _generate_one_time_secret() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def create_qr_login_attempt(
+    db: Session,
+    *,
+    ip_address: str | None,
+    user_agent: str | None,
+) -> tuple[str, str, str, int]:
+    from app.core.auth.models import LoginAttempt
+    
+    if ip_address:
+        now = _utc_now()
+        recent_window = now - timedelta(minutes=QR_LOGIN_RATE_LIMIT_WINDOW_MINUTES)
+        recent_attempts_count = (
+            db.query(LoginAttempt)
+            .filter(
+                LoginAttempt.ip_address == ip_address,
+                LoginAttempt.created_at >= recent_window,
+            )
+            .count()
+        )
+        
+        if recent_attempts_count >= QR_LOGIN_MAX_ATTEMPTS_PER_IP:
+            raise APIError(
+                code="AUTH_QR_RATE_LIMIT",
+                http_code=429,
+                message="Слишком много попыток входа. Попробуйте позже.",
+            )
+    
+    login_token = _generate_login_token()
+    now = _utc_now()
+    expires_at = now + timedelta(seconds=QR_LOGIN_TOKEN_TTL_SECONDS)
+    
+    deep_link = f"https://t.me/mechtaai_official_bot?start={login_token}"
+    qr_code_data = deep_link
+    
+    attempt = LoginAttempt(
+        token=login_token,
+        status="pending",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        qr_code_data=qr_code_data,
+        expires_at=expires_at,
+    )
+    db.add(attempt)
+    db.flush()
+    
+    return login_token, qr_code_data, deep_link, QR_LOGIN_TOKEN_TTL_SECONDS
+
+
+def get_qr_login_status(
+    db: Session,
+    login_token: str,
+) -> tuple[str, str | None]:
+    from app.core.auth.models import LoginAttempt
+    
+    attempt = (
+        db.query(LoginAttempt)
+        .filter(LoginAttempt.token == login_token)
+        .first()
+    )
+    
+    if not attempt:
+        raise APIError(
+            code="AUTH_QR_TOKEN_NOT_FOUND",
+            http_code=404,
+            message="Токен авторизации не найден",
+        )
+    
+    now = _utc_now()
+    if attempt.expires_at <= now:
+        attempt.status = "expired"
+        db.add(attempt)
+        raise APIError(
+            code="AUTH_QR_TOKEN_EXPIRED",
+            http_code=400,
+            message="Токен авторизации истек. Создайте новый QR-код.",
+        )
+    
+    if attempt.status == "confirmed":
+        if not attempt.one_time_secret:
+            raise APIError(
+                code="AUTH_QR_SECRET_MISSING",
+                http_code=500,
+                message="Внутренняя ошибка при генерации секрета",
+            )
+        return "confirmed", attempt.one_time_secret
+    
+    return attempt.status, None
+
+
+def confirm_qr_login(
+    db: Session,
+    *,
+    login_token: str,
+    telegram_id: int,
+    username: str | None,
+    first_name: str | None,
+    last_name: str | None,
+    photo_url: str | None,
+) -> None:
+    from app.core.auth.models import LoginAttempt
+    
+    attempt = (
+        db.query(LoginAttempt)
+        .filter(LoginAttempt.token == login_token)
+        .with_for_update()
+        .first()
+    )
+    
+    if not attempt:
+        raise APIError(
+            code="AUTH_QR_TOKEN_NOT_FOUND",
+            http_code=404,
+            message="Токен авторизации не найден",
+        )
+    
+    now = _utc_now()
+    if attempt.expires_at <= now:
+        attempt.status = "expired"
+        db.add(attempt)
+        raise APIError(
+            code="AUTH_QR_TOKEN_EXPIRED",
+            http_code=400,
+            message="Токен авторизации истек",
+        )
+    
+    if attempt.status != "pending":
+        raise APIError(
+            code="AUTH_QR_ALREADY_USED",
+            http_code=400,
+            message="Этот токен уже был использован",
+        )
+    
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    
+    if not user:
+        if not first_name:
+            raise APIError(
+                code="AUTH_TELEGRAM_FIRST_NAME_REQUIRED",
+                http_code=400,
+                message="Имя пользователя обязательно для регистрации",
+            )
+        
+        email = f"{telegram_id}@bot.mechta.ai"
+        password = _generate_strong_password()
+        payload = UserCreate(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user = create_user(db, payload)
+        user.is_active = True
+        user.telegram_id = telegram_id
+        db.add(user)
+        db.flush()
+    else:
+        updated = False
+        if first_name and first_name != user.first_name:
+            user.first_name = first_name
+            updated = True
+        if last_name and last_name != user.last_name:
+            user.last_name = last_name
+            updated = True
+        if updated:
+            db.add(user)
+    
+    one_time_secret = _generate_one_time_secret()
+    
+    attempt.status = "confirmed"
+    attempt.user_id = user.id
+    attempt.telegram_id = telegram_id
+    attempt.telegram_username = username
+    attempt.telegram_first_name = first_name
+    attempt.telegram_last_name = last_name
+    attempt.telegram_photo_url = photo_url
+    attempt.one_time_secret = one_time_secret
+    attempt.confirmed_at = now
+    
+    db.add(attempt)
+
+
+def exchange_qr_secret_for_tokens(
+    db: Session,
+    one_time_secret: str,
+    *,
+    user_agent: str | None = None,
+) -> tuple[User, TokenPair]:
+    from app.core.auth.models import LoginAttempt
+    
+    attempt = (
+        db.query(LoginAttempt)
+        .filter(LoginAttempt.one_time_secret == one_time_secret)
+        .with_for_update()
+        .first()
+    )
+    
+    if not attempt:
+        raise APIError(
+            code="AUTH_QR_SECRET_INVALID",
+            http_code=401,
+            message="Неверный секретный ключ",
+        )
+    
+    if attempt.status != "confirmed":
+        raise APIError(
+            code="AUTH_QR_NOT_CONFIRMED",
+            http_code=400,
+            message="Попытка входа еще не подтверждена",
+        )
+    
+    if attempt.used_at is not None:
+        raise APIError(
+            code="AUTH_QR_ALREADY_EXCHANGED",
+            http_code=400,
+            message="Этот секрет уже был использован",
+        )
+    
+    now = _utc_now()
+    if attempt.expires_at <= now:
+        raise APIError(
+            code="AUTH_QR_TOKEN_EXPIRED",
+            http_code=400,
+            message="Время действия токена истекло",
+        )
+    
+    if not attempt.user_id:
+        raise APIError(
+            code="AUTH_QR_USER_NOT_SET",
+            http_code=500,
+            message="Внутренняя ошибка: пользователь не найден",
+        )
+    
+    user = db.query(User).filter(User.id == attempt.user_id).first()
+    if not user:
+        raise APIError(
+            code="AUTH_USER_NOT_FOUND",
+            http_code=404,
+            message="Пользователь не найден",
+        )
+    
+    if not user.is_active:
+        raise APIError(
+            code="AUTH_USER_INACTIVE",
+            http_code=403,
+            message="Пользователь деактивирован",
+        )
+    
+    tokens = create_session_and_tokens(
+        db,
+        user,
+        user_agent=user_agent or attempt.user_agent,
+        ip_address=attempt.ip_address,
+    )
+    
+    attempt.used_at = now
+    db.add(attempt)
+    
+    return user, tokens
+
+
+def cleanup_expired_qr_login_attempts(db: Session) -> int:
+    from app.core.auth.models import LoginAttempt
+    
+    cutoff_time = _utc_now() - timedelta(seconds=QR_LOGIN_TOKEN_TTL_SECONDS * 2)
+    
+    count = (
+        db.query(LoginAttempt)
+        .filter(LoginAttempt.created_at < cutoff_time)
+        .delete(synchronize_session=False)
+    )
+    
+    db.commit()
+    return count
+
+
 __all__ = [
     "create_user",
     "authenticate_user",
@@ -541,4 +830,9 @@ __all__ = [
     "request_password_reset",
     "reset_password",
     "validate_password_strength",
+    "create_qr_login_attempt",
+    "get_qr_login_status",
+    "confirm_qr_login",
+    "exchange_qr_secret_for_tokens",
+    "cleanup_expired_qr_login_attempts",
 ]

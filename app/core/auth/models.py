@@ -75,6 +75,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    login_attempts = relationship(
+        "LoginAttempt",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class UserSession(Base):
@@ -166,9 +171,52 @@ class EmailVerificationToken(Base):
     user = relationship("User", back_populates="email_verification_tokens")
 
 
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    token = Column(String, unique=True, nullable=False, index=True)
+    status = Column(String, nullable=False, default="pending")
+    
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    telegram_id = Column(BigInteger, nullable=True)
+    telegram_username = Column(String, nullable=True)
+    telegram_first_name = Column(String, nullable=True)
+    telegram_last_name = Column(String, nullable=True)
+    telegram_photo_url = Column(String, nullable=True)
+    
+    one_time_secret = Column(String, nullable=True, unique=True)
+    
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    
+    qr_code_data = Column(String, nullable=True)
+    
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="login_attempts")
+
+
 __all__ = [
     "User",
     "UserSession",
     "PasswordResetToken",
     "EmailVerificationToken",
+    "LoginAttempt",
 ]

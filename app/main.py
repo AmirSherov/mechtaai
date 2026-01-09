@@ -4,11 +4,13 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from sqlalchemy import text
 
 from app.core.auth.api.v1.routes_auth import router as auth_router
 from app.core.auth.api.v1.routes_me import router as me_router
+from app.core.auth.api.v1.routes_telegram_qr import router as telegram_qr_router
 from app.core.areas.api.v1.routes_areas import router as areas_router
 from app.core.future_story.api.v1.routes_future_story import (
     router as future_story_router,
@@ -46,6 +48,19 @@ from app.response.response import APIError
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 try:
     uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
@@ -255,6 +270,7 @@ __STATUS_ROWS__
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(me_router, prefix="/api/v1")
+app.include_router(telegram_qr_router, prefix="/api/v1")
 app.include_router(areas_router, prefix="/api/v1")
 app.include_router(life_wheel_router, prefix="/api/v1")
 app.include_router(wants_router, prefix="/api/v1")

@@ -109,6 +109,38 @@ class CheckEmailVerificationCodeRequest(BaseModel):
     code: str
 
 
+class TelegramQRInitResponse(BaseModel):
+    login_token: str
+    qr_code_data: str
+    deep_link: str
+    expires_in_seconds: int
+
+
+class TelegramQRStatusResponse(BaseModel):
+    status: str
+    one_time_secret: str | None = None
+
+
+class TelegramQRConfirmRequest(BaseModel):
+    login_token: str
+    telegram_id: int
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    photo_url: str | None = None
+
+
+class TelegramQRExchangeRequest(BaseModel):
+    one_time_secret: str
+
+
+class TelegramQRExchangeResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
 __all__ = [
     "UserPublic",
     "UserCreate",
@@ -123,4 +155,9 @@ __all__ = [
     "SessionPublic",
     "SendEmailVerificationRequest",
     "CheckEmailVerificationCodeRequest",
+    "TelegramQRInitResponse",
+    "TelegramQRStatusResponse",
+    "TelegramQRConfirmRequest",
+    "TelegramQRExchangeRequest",
+    "TelegramQRExchangeResponse",
 ]
