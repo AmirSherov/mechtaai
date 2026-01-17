@@ -191,7 +191,7 @@ class WantsProgressPublic(BaseModel):
 class WantsTopWant(BaseModel):
     id: str
     text: str
-    area_id: str
+    area_id: str | None = None
     horizon: str
     priority: int
 
@@ -199,7 +199,7 @@ class WantsTopWant(BaseModel):
 class WantsTopPain(BaseModel):
     id: str
     text: str
-    area_id: str
+    area_id: str | None = None
     intensity: int
 
 
