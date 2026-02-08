@@ -15,7 +15,9 @@ from app.database.base import Base
 from app.database.session import engine as app_engine
 from app.core.auth import models as auth_models  # noqa: F401
 from app.core.areas import models as areas_models  # noqa: F401
+from app.core.billing import models as billing_models  # noqa: F401
 from app.core.life_wheel import models as life_wheel_models  # noqa: F401
+from app.core.promocodes import models as promocodes_models  # noqa: F401
 from app.core.wants import models as wants_models  # noqa: F401
 
 

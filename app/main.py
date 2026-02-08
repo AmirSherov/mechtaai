@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +40,12 @@ from app.core.esoterics.api.v1.routes_esoterics import (
 from app.core.billing.api.v1.routes_billing import (
     router as billing_router,
 )
+from app.core.admin.api.v1.routes_admin import (
+    router as admin_router,
+)
+from app.core.promocodes.api.v1.routes_promocodes import (
+    router as promocodes_router,
+)
 from app.database.session import SessionLocal
 from app.utils.redis_client import get_redis
 from mechtaai_bg_worker.celery_app import celery_app
@@ -47,6 +54,18 @@ from app.response.response import APIError
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://mechtaai.ru",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 try:
     uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
@@ -269,6 +288,8 @@ app.include_router(visuals_router, prefix="/api/v1")
 app.include_router(gamification_router, prefix="/api/v1")
 app.include_router(esoterics_router, prefix="/api/v1")
 app.include_router(billing_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
+app.include_router(promocodes_router, prefix="/api/v1")
 
 
 __all__ = ["app"]

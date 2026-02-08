@@ -118,6 +118,14 @@ class WantsStreamAppendPublic(BaseModel):
     )
 
 
+class WantsStreamRemoveIn(BaseModel):
+    index: int = Field(
+        ...,
+        ge=0,
+        description="0-based индекс строки в потоке, которую нужно удалить.",
+    )
+
+
 class WantsFutureMeSetIn(BaseModel):
     text: str = Field(
         ...,
@@ -237,6 +245,7 @@ __all__ = [
     "WantsStreamStartPublic",
     "WantsTextIn",
     "WantsStreamAppendPublic",
+    "WantsStreamRemoveIn",
     "WantsFutureMeSetIn",
     "WantsFutureMePublic",
     "WantsReverseUpdateIn",

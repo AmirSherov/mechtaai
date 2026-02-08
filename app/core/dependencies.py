@@ -116,4 +116,16 @@ def get_current_user(
     return user
 
 
-__all__ = ["get_db", "get_current_user"]
+def get_current_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    if not user.is_superuser:
+        raise APIError(
+            code="AUTH_ADMIN_REQUIRED",
+            http_code=403,
+            message="Admin access required",
+        )
+    return user
+
+
+__all__ = ["get_db", "get_current_user", "get_current_admin"]

@@ -137,6 +137,32 @@ def finish_stream(db: Session, user_id: UUID) -> WantsRaw:
     return wants_raw
 
 
+def remove_stream_line(
+    db: Session,
+    user_id: UUID,
+    index: int,
+) -> WantsRaw:
+    wants_raw = get_or_create_draft(db, user_id)
+    _ensure_draft_mutable(wants_raw)
+
+    lines = (wants_raw.raw_wants_stream or "").split("\n")
+    lines = [line for line in lines if line.strip() != ""]
+
+    if index < 0 or index >= len(lines):
+        raise APIError(
+            code="WANTS_STREAM_INDEX_INVALID",
+            http_code=400,
+            message="Некорректный индекс строки.",
+        )
+
+    lines.pop(index)
+    wants_raw.raw_wants_stream = "\n".join(lines) if lines else None
+    db.add(wants_raw)
+    db.commit()
+    db.refresh(wants_raw)
+    return wants_raw
+
+
 def set_future_me(db: Session, user_id: UUID, text: str) -> WantsRaw:
     wants_raw = get_or_create_draft(db, user_id)
     _ensure_draft_mutable(wants_raw)
@@ -321,6 +347,7 @@ __all__ = [
     "start_stream",
     "append_stream_text",
     "finish_stream",
+    "remove_stream_line",
     "set_future_me",
     "append_future_me_text",
     "finish_future_me",

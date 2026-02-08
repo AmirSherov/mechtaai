@@ -21,6 +21,7 @@ class UserPublic(BaseModel):
     personal_new_year_type: Literal["calendar", "birthday", "custom"]
     personal_new_year_date: date | None
     is_active: bool
+    is_superuser: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

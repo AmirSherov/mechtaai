@@ -21,6 +21,7 @@ from app.core.wants.schemas import (
     WantsReversePublic,
     WantsReverseUpdateIn,
     WantsStreamAppendPublic,
+    WantsStreamRemoveIn,
     WantsStreamStartPublic,
     WantsTextIn,
 )
@@ -35,6 +36,7 @@ from app.core.wants.services import (
     get_history_page,
     get_latest_analysis,
     get_or_create_draft,
+    remove_stream_line,
     set_future_me,
     start_stream,
     update_reverse,
@@ -182,6 +184,31 @@ def stream_append_view(
         raw_id=wants_raw.id,
         is_completed=is_completed,
         raw_wants_stream_preview=_preview(wants_raw.raw_wants_stream),
+    )
+    return make_success_response(result=result)
+
+
+@router.post(
+    "/stream/remove",
+    response_model=StandardResponse,
+    summary="Поток: удалить строку по индексу",
+    description=(
+        "Удаляет одну строку из упражнения 'Поток Я хочу' по индексу.\n\n"
+        "- Индексация 0-based\n"
+        "- Можно использовать для коррекции записанных желаний\n"
+    ),
+)
+def stream_remove_view(
+    payload: WantsStreamRemoveIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> StandardResponse:
+    wants_raw = remove_stream_line(db, user.id, payload.index)
+    result = WantsStreamStartPublic(
+        raw_id=wants_raw.id,
+        stream_started_at=wants_raw.stream_started_at,
+        stream_timer_seconds=wants_raw.stream_timer_seconds,
+        stream_completed_at=wants_raw.stream_completed_at,
     )
     return make_success_response(result=result)
 
