@@ -257,7 +257,7 @@ async def root() -> str:
     <body>
         <div class="container">
             <h1>MechtaAI Backend</h1>
-            <p class="sub">Р­С‚Рѕ backend API СЃРµСЂРІРёСЃР° Mechta AI.</p>
+            <p class="sub">Mechta AI Backend API</p>
 
             <div class="info-box">
 __STATUS_ROWS__
